@@ -10,12 +10,17 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.camera.core.Camera;
 import androidx.camera.core.CameraSelector;
+import androidx.camera.core.FocusMeteringAction;
 import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.ImageCaptureException;
 import androidx.camera.core.ImageProxy;
+import androidx.camera.core.MeteringPoint;
+import androidx.camera.core.MeteringPointFactory;
 import androidx.camera.core.Preview;
+import androidx.camera.core.SurfaceOrientedMeteringPointFactory;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.camera.view.PreviewView;
 import androidx.core.content.ContextCompat;
@@ -87,11 +92,22 @@ public class MainActivity extends AppCompatActivity implements ImageAnalysis.Ana
 
         imageAnalysis.setAnalyzer(getExecutor(), this);
 
+
+        //auto-focus disable use case
+       /* MeteringPointFactory factory =   new SurfaceOrientedMeteringPointFactory(
+                previewView.getWidth(), previewView.getHeight());
+        MeteringPoint autoFocusPoint = factory.createPoint(1, 1, 1);
+
+        FocusMeteringAction action = new FocusMeteringAction.Builder(autoFocusPoint,
+                FocusMeteringAction.FLAG_AF).disableAutoCancel().build();*/
+
         //bind to lifecycle:
-        cameraProvider.bindToLifecycle((LifecycleOwner) this,
+        Camera camera  = cameraProvider.bindToLifecycle((LifecycleOwner) this,
                 cameraSelector,
                 preview,
                 imageCapture);
+        //camera.getCameraControl().startFocusAndMetering(action);
+
     }
 
     @Override
@@ -109,9 +125,14 @@ public class MainActivity extends AppCompatActivity implements ImageAnalysis.Ana
         }
     }
 
+    private void enableButtons(boolean enable) {
+        bCapture.setIndeterminate(!enable);
+        bCapture.setEnabled(enable);
+    }
+
     private void capturePhoto() {
         long timestamp = System.currentTimeMillis();
-
+        enableButtons(false);
         ContentValues contentValues = new ContentValues();
         contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, timestamp);
         contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg");
@@ -130,6 +151,7 @@ public class MainActivity extends AppCompatActivity implements ImageAnalysis.Ana
                         Toast.makeText(MainActivity.this,
                                 "Photo has been saved successfully.",
                                 Toast.LENGTH_SHORT).show();
+                        enableButtons(true);
                     }
 
                     @Override
