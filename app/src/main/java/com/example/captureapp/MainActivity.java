@@ -33,6 +33,8 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
+import com.github.clans.fab.FloatingActionButton;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -45,7 +47,7 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "AndroidCameraApi";
-    private Button takePictureButton;
+    private FloatingActionButton takePictureButton;
     private TextureView textureView;
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
 
@@ -76,7 +78,7 @@ public class MainActivity extends AppCompatActivity {
         textureView = (TextureView) findViewById(R.id.texture);
         assert textureView != null;
         textureView.setSurfaceTextureListener(textureListener);
-        takePictureButton = (Button) findViewById(R.id.btn_takepicture);
+        takePictureButton = (FloatingActionButton) findViewById(R.id.btn_takepicture);
         assert takePictureButton != null;
         takePictureButton.setOnClickListener(new View.OnClickListener() {
             @Override
