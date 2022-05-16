@@ -29,6 +29,7 @@ import androidx.lifecycle.LifecycleOwner;
 import com.github.clans.fab.FloatingActionButton;
 import com.google.common.util.concurrent.ListenableFuture;
 
+import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 
@@ -40,6 +41,9 @@ public class MainActivity extends AppCompatActivity implements ImageAnalysis.Ana
 
 
     private FloatingActionButton bCapture;
+
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -113,7 +117,8 @@ public class MainActivity extends AppCompatActivity implements ImageAnalysis.Ana
     @Override
     public void analyze(@NonNull ImageProxy image) {
         // image processing here for the current frame
-        Log.d("TAG", "analyze: got the frame at: " + image.getImageInfo().getTimestamp());
+
+        Log.d("analyse", "analyze: got the frame at: " + image.getImageInfo().getTimestamp());
         image.close();
     }
 
