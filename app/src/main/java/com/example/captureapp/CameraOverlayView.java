@@ -13,6 +13,7 @@ public class CameraOverlayView extends View {
     public final static float PADDING = 0.5f;
     // public final static float PADDING = 0f;
 
+
     private final Paint borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint innerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF overlayRect = new RectF();

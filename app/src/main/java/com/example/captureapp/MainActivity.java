@@ -37,9 +37,38 @@ public class MainActivity extends AppCompatActivity implements ImageAnalysis.Ana
     private ListenableFuture<ProcessCameraProvider> cameraProviderFuture;
 
     PreviewView previewView;
+    private View cameraOverlayView;
     private ImageCapture imageCapture;
     private FloatingActionButton bCapture;
+    private int heightOriginal,
+            widthOriginal,
+            heightFrame,
+            widthFrame,
+            leftFrame,
+            topFrame;
 
+
+    @Override
+    protected void onPostResume() {
+        super.onPostResume();
+
+        //
+
+        heightOriginal = previewView.getHeight();
+        widthOriginal = previewView.getWidth();
+        heightFrame = cameraOverlayView.getHeight();
+        widthFrame = cameraOverlayView.getWidth();
+        leftFrame = cameraOverlayView.getLeft();
+        topFrame = cameraOverlayView.getTop();
+
+        Log.d("main", "widthOriginal: " + widthOriginal);
+        Log.d("main", "heightOriginal: " + heightOriginal);
+        Log.d("main", "heightFrame: " + heightFrame);
+        Log.d("main", "widthFrame: " + widthFrame);
+        Log.d("main", "leftFrame: " + leftFrame);
+        Log.d("main", "topFrame: " + topFrame);
+
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,6 +84,7 @@ public class MainActivity extends AppCompatActivity implements ImageAnalysis.Ana
         //
         previewView = findViewById(R.id.previewView);
         bCapture = findViewById(R.id.bCapture);
+        cameraOverlayView = findViewById(R.id.cameraOverlayView);
 
 
         //
@@ -112,6 +142,8 @@ public class MainActivity extends AppCompatActivity implements ImageAnalysis.Ana
                 cameraSelector,
                 preview,
                 imageCapture);
+
+
         //camera.getCameraControl().startFocusAndMetering(action);
 
     }
@@ -161,10 +193,19 @@ public class MainActivity extends AppCompatActivity implements ImageAnalysis.Ana
                                 "Photo has been saved successfully.",
                                 Toast.LENGTH_SHORT).show();
                         enableButtons(true);
-                        Intent myIntent =  new Intent(MainActivity.this,
+
+
+                        Intent myIntent = new Intent(MainActivity.this,
                                 ImagePreviewActivity.class);
                         myIntent.putExtra(ImagePreviewActivity.FILE_NAME_TAG,
-                                timestamp+".jpg");
+                                timestamp + ".jpg");
+                        myIntent.putExtra(ImagePreviewActivity.HEIGHT_ORIGINAL_TAG, heightOriginal);
+                        myIntent.putExtra(ImagePreviewActivity.WIDTH_ORIGINAL_TAG, widthOriginal);
+                        myIntent.putExtra(ImagePreviewActivity.HEIGHT_FRAME_TAG, heightFrame);
+                        myIntent.putExtra(ImagePreviewActivity.WIDTH_FRAME_TAG, widthFrame);
+                        myIntent.putExtra(ImagePreviewActivity.LEFT_FRAME_TAG, leftFrame);
+                        myIntent.putExtra(ImagePreviewActivity.TOP_FRAME_TAG, topFrame);
+
                         startActivity(myIntent);
                     }
 

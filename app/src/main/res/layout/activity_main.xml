@@ -16,9 +16,16 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
          />
-        <com.example.captureapp.CameraOverlayView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+        <View
+            android:id="@+id/cameraOverlayView"
+            android:layout_width="250dp"
+            android:layout_height="100dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            android:background="@drawable/overlay"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            />
+
         <com.github.clans.fab.FloatingActionButton
             android:id="@+id/bCapture"
             android:layout_width="wrap_content"

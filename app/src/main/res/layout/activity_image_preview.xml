@@ -5,21 +5,19 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".ImagePreviewActivity">
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/design_default_color_on_primary"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:visibility="visible"
-        android:id="@+id/previewLayout"
-        >
+
         <ImageView
             android:id="@+id/previewImageView"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:src="@drawable/ic_launcher_foreground"
-            android:contentDescription="@string/app_name" />
+            android:contentDescription="@string/app_name"
+            app:layout_constraintBottom_toTopOf="@+id/sendCapture"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:layout_marginTop="24dp"
+            />
         <com.github.clans.fab.FloatingActionButton
             android:id="@+id/sendCapture"
             android:layout_width="wrap_content"
@@ -41,8 +39,12 @@
             app:fab_progress_backgroundColor="#4D000000"
             app:fab_progress_indeterminate="false"
             app:fab_progress_showBackground="true"
+            app:layout_constraintBottom_toBottomOf="parent"
+
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
             android:layout_marginBottom="24dp"
             />
-    </LinearLayout>
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>
