@@ -3,6 +3,7 @@ package com.example.captureapp;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.ContentValues;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -160,7 +161,11 @@ public class MainActivity extends AppCompatActivity implements ImageAnalysis.Ana
                                 "Photo has been saved successfully.",
                                 Toast.LENGTH_SHORT).show();
                         enableButtons(true);
-
+                        Intent myIntent =  new Intent(MainActivity.this,
+                                ImagePreviewActivity.class);
+                        myIntent.putExtra(ImagePreviewActivity.FILE_NAME_TAG,
+                                timestamp+".jpg");
+                        startActivity(myIntent);
                     }
 
                     @Override
