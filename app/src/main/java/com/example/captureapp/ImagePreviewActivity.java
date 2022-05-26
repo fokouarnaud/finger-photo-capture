@@ -9,14 +9,42 @@ import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.util.Base64;
 import android.util.Log;
+import android.view.View;
 import android.widget.ImageView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.github.clans.fab.FloatingActionButton;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
+
+import io.reactivex.CompletableTransformer;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.schedulers.Schedulers;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import okhttp3.WebSocket;
+import okhttp3.WebSocketListener;
+import ua.naiksoftware.stomp.Stomp;
+import ua.naiksoftware.stomp.StompClient;
+import ua.naiksoftware.stomp.dto.StompHeader;
 
 public class ImagePreviewActivity extends AppCompatActivity {
 
@@ -31,6 +59,27 @@ public class ImagePreviewActivity extends AppCompatActivity {
     public static final String LEFT_FRAME_TAG = "LEFT_FRAME_TAG";
     public static final String TOP_FRAME_TAG = "TOP_FRAME_TAG";
 
+    // connection can be slow with long runtime server processing
+    // so we have to negotiate the connection every time
+    // ( long polling: not long than 40 second [or any amount of time] to respond a request)
+    // because of that we constantly reestablishing a connection with the server (short polling)
+    // webSocket provide a full-duplex connection to avoid the behaviour
+    // of constantly reestablishing connection
+
+    // we can use STOMP protocol for effective client-server communication with webSocket.
+    // It defines a handful of frame types that are mapped onto WebSockets frames
+    // e.g., CONNECT, SUBSCRIBE, UNSUBSCRIBE, ACK, or SEND
+    private WebSocket webSocket;
+    private final String SERVER_PATH="wss://javaweb-server.herokuapp.com/ws";
+    private StompClient mStompClient;
+    private final  String uniqueID = UUID.randomUUID().toString();
+    private Disposable mRestPingDisposable;
+    private final SimpleDateFormat mTimeFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
+    private CompositeDisposable compositeDisposable;
+    public static final String LOGIN = "login";
+
+    public static final String PASSCODE = "passcode";
+
     int heightOriginal,
             widthOriginal,
             heightFrame,
@@ -43,6 +92,97 @@ public class ImagePreviewActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_image_preview);
 
+
+
+        initiateSocketConnection();
+    }
+
+    public void disconnectStomp(View view) {
+        mStompClient.disconnect();
+    }
+    @Override
+    protected void onDestroy() {
+        mStompClient.disconnect();
+        super.onDestroy();
+    }
+
+
+    private void initiateSocketConnection() {
+        //OkHttpClient client = new OkHttpClient();
+        //Request request = new Request.Builder().url(SERVER_PATH).build();
+       // webSocket= client.newWebSocket(request,new SocketListener());
+        mStompClient = Stomp.over(Stomp.ConnectionProvider.OKHTTP, SERVER_PATH);
+        List<StompHeader> headers = new ArrayList<>();
+        headers.add(new StompHeader(LOGIN, "guest"));
+        headers.add(new StompHeader(PASSCODE, "guest"));
+
+        //mStompClient.withClientHeartbeat(1000).withServerHeartbeat(1000);
+        resetSubscriptions();
+        Disposable dispLifecycle = mStompClient.lifecycle()
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(lifecycleEvent -> {
+                    switch (lifecycleEvent.getType()) {
+                        case OPENED:
+                            toast("Stomp connection opened");
+                            initializeView();
+                            break;
+                        case ERROR:
+                            Log.e("stomp", "Stomp connection error", lifecycleEvent.getException());
+                            toast("Stomp connection error");
+                            break;
+                        case CLOSED:
+                            toast("Stomp connection closed");
+                            resetSubscriptions();
+                            break;
+                        case FAILED_SERVER_HEARTBEAT:
+                            toast("Stomp failed server heartbeat");
+                            break;
+                    }
+                });
+
+        compositeDisposable.add(dispLifecycle);
+
+        // Receive greetings
+        Disposable dispTopic = mStompClient.topic("/chatroom/public")
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(topicMessage -> {
+                    Log.d("stomp", "Received " + topicMessage.getPayload());
+                }, throwable -> {
+                    Log.e("stomp", "Error on subscribe topic", throwable);
+                });
+
+        compositeDisposable.add(dispTopic);
+
+
+        mStompClient.connect();
+    }
+    private void resetSubscriptions() {
+        if (compositeDisposable != null) {
+            compositeDisposable.dispose();
+        }
+        compositeDisposable = new CompositeDisposable();
+    }
+    private  class SocketListener extends WebSocketListener{
+        @Override
+        public void onOpen(WebSocket webSocket, Response response) {
+            super.onOpen(webSocket, response);
+            runOnUiThread(()->{
+                Toast.makeText(ImagePreviewActivity.this,
+                        "Socket Connection Successful!",
+                        Toast.LENGTH_SHORT).show();
+                    initializeView();
+            });
+        }
+
+        @Override
+        public void onMessage(WebSocket webSocket, String text) {
+            super.onMessage(webSocket, text);
+        }
+    }
+
+    private void initializeView() {
         //
         sendCapture = findViewById(R.id.sendCapture);
         previewImageView = findViewById(R.id.previewImageView);
@@ -70,6 +210,7 @@ public class ImagePreviewActivity extends AppCompatActivity {
         showPreview(fileNameSource);
     }
 
+
     private void showPreview(String nameFile) {
 
         try {
@@ -83,7 +224,7 @@ public class ImagePreviewActivity extends AppCompatActivity {
                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI.toString() +
                             "/" + cursor.getString(0));
             Bitmap bitmapImage = null;
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 bitmapImage = ImageDecoder.decodeBitmap(ImageDecoder.createSource(
                         this.getContentResolver(),
                         uriPath));
@@ -93,29 +234,51 @@ public class ImagePreviewActivity extends AppCompatActivity {
 
             previewImageView.setImageBitmap(bitmapImage);
             Log.d("uri", "URI method is successful");
+
+            Bitmap finalBitmapImage = bitmapImage;
+            sendCapture.setOnClickListener(v->{
+                assert finalBitmapImage != null;
+                sendImage(finalBitmapImage);
+
+            });
         } catch (Exception e) {
             Log.d("uri", "Failure in URI method");
 
         }
     }
+    private void sendImage(Bitmap image){
+        ByteArrayOutputStream outputStream= new ByteArrayOutputStream();
+        image.compress(Bitmap.CompressFormat.JPEG,50,outputStream);
+        String base64String= Base64.encodeToString(outputStream.toByteArray(),Base64.DEFAULT);
+        JSONObject jsonObject= new JSONObject();
+        try{
 
-    private Bitmap cropBitmap(Bitmap bmp2) {
+            jsonObject.put("name","ok");
+            jsonObject.put("image",base64String);
+            compositeDisposable.add(mStompClient.send("/app/message", jsonObject.toString())
+                    .compose(applySchedulers())
+                    .subscribe(() -> {
+                        Log.d("stomp", "STOMP echo send successfully");
+                    }, throwable -> {
+                        Log.e("stomp", "Error send STOMP echo", throwable);
+                        toast(throwable.getMessage());
+                    }));
 
-        Bitmap bmOverlay = Bitmap.createBitmap(bmp2.getWidth(), bmp2.getHeight(), Bitmap.Config.ARGB_8888);
-
-        Paint paint = new Paint();
-        paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.CLEAR));
-
-        Canvas canvas = new Canvas(bmOverlay);
-
-        canvas.drawBitmap(bmp2, 0, 0, null);
-        Log.d("uri", "width_over: " + bmOverlay.getWidth() + " , height_over: " + bmOverlay.getHeight());
-        canvas.drawRect(0, 280, 520, 520, paint);
-
-        Log.d("uri", "width_crop: " + bmOverlay.getWidth() + " , height_crop: " + bmOverlay.getHeight());
-
-        return bmOverlay;
+            jsonObject.put("isSent",true);
+        }catch (JSONException e){
+            e.printStackTrace();
+        }
     }
+
+    protected CompletableTransformer applySchedulers() {
+        return upstream -> upstream
+                .unsubscribeOn(Schedulers.newThread())
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread());
+    }
+
+
+
 
     /**
      * Crop a image
@@ -151,6 +314,9 @@ public class ImagePreviewActivity extends AppCompatActivity {
 //        ) //100 is the best quality possible
         //   return stream.toByteArray()
 
+    }
+    private void toast(String text) {
+        Toast.makeText(this, text, Toast.LENGTH_SHORT).show();
     }
 
 }
