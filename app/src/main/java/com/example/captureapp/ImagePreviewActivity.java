@@ -105,7 +105,7 @@ public class ImagePreviewActivity extends AppCompatActivity {
         //Request request = new Request.Builder().url(SERVER_PATH).build();
         // webSocket= client.newWebSocket(request,new SocketListener());
         mStompClient = Stomp.over(Stomp.ConnectionProvider.OKHTTP, SERVER_PATH);
-        mStompClient.connect(null);
+
 
         //mStompClient.withClientHeartbeat(1000).withServerHeartbeat(1000);
         resetSubscriptions();
@@ -134,19 +134,32 @@ public class ImagePreviewActivity extends AppCompatActivity {
 
         compositeDisposable.add(dispLifecycle);
 
-        // Receive greetings
-        Disposable dispTopic = mStompClient.topic("/chatroom/public")
+        // Receive private message
+        Disposable dispTopicPrivate = mStompClient.topic("/user/"+uniqueID+"/private")
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(topicMessage -> {
-                    Log.d("stomp", "Received " + topicMessage.getPayload());
+                    Log.d("stomp", "Received private: " + topicMessage.getPayload());
                 }, throwable -> {
                     Log.e("stomp", "Error on subscribe topic", throwable);
                 });
 
+        // Receive chatroom message
+        Disposable dispTopic= mStompClient.topic("/chatroom/public")
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(topicMessage -> {
+                    Log.d("stomp", "Received private: " + topicMessage.getPayload());
+                }, throwable -> {
+                    Log.e("stomp", "Error on subscribe topic", throwable);
+                });
+
+
+
+
+        compositeDisposable.add(dispTopicPrivate);
         compositeDisposable.add(dispTopic);
-
-
+        mStompClient.connect(null);
 
     }
 
@@ -241,21 +254,39 @@ public class ImagePreviewActivity extends AppCompatActivity {
         }
     }
 
+    private void userJoin(){
+        JSONObject jsonObject = new JSONObject();
+        try {
+
+            jsonObject.put("senderName", uniqueID);
+            jsonObject.put("status","JOIN");
+            mStompClient.send("/app/message", jsonObject.toString()).subscribe();
+
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+    private void sendMessage( String base64String){
+        JSONObject jsonObject = new JSONObject();
+        try {
+
+            jsonObject.put("senderName", uniqueID);
+            jsonObject.put("receiverName", uniqueID);
+            jsonObject.put("status","MESSAGE");
+            jsonObject.put("message", base64String);
+           // mStompClient.send("/app/message", jsonObject.toString()).subscribe();
+            mStompClient.send("/app/private-message", jsonObject.toString()).subscribe();
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
     private void sendImage(Bitmap image) {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         image.compress(Bitmap.CompressFormat.JPEG, 50, outputStream);
         String base64String = Base64.encodeToString(outputStream.toByteArray(), Base64.DEFAULT);
-        JSONObject jsonObject = new JSONObject();
-        try {
-
-            jsonObject.put("name", "ok");
-            jsonObject.put("image", base64String);
-            webSocket.send(jsonObject.toString());
-
-            jsonObject.put("isSent", true);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
+        sendMessage(base64String);
     }
 
     private void toast(String text) {
@@ -277,10 +308,6 @@ public class ImagePreviewActivity extends AppCompatActivity {
                 heightFinal = heightFrame * heightReal / heightOriginal,
                 leftFinal = leftFrame * widthReal / widthOriginal,
                 topFinal = topFrame * heightReal / heightOriginal;
-        Log.d("uri", "widthFrame: " + widthFrame + " , heightFrame: " + heightFrame);
-        Log.d("uri", "widthReal: " + widthReal + " , heightReal: " + heightReal);
-        Log.d("uri", "widthFinal: " + widthFinal + " , heightFinal: " + heightFinal
-                + ", leftFinal: " + leftFinal + ", topFinal: " + topFinal);
 
         return Bitmap.createBitmap(bitmap,
                 leftFinal,
@@ -288,13 +315,6 @@ public class ImagePreviewActivity extends AppCompatActivity {
                 widthFinal,
                 heightFinal);
 
-//        val stream = ByteArrayOutputStream()
-//        bitmapFinal.compress(
-//                Bitmap.CompressFormat.JPEG,
-//                100,
-//                stream
-//        ) //100 is the best quality possible
-        //   return stream.toByteArray()
 
     }
 
