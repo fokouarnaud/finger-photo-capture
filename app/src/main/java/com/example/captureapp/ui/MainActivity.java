@@ -1,4 +1,12 @@
-package com.example.captureapp;
+package com.example.captureapp.ui;
+
+import static com.example.captureapp.util.Constants.FILE_NAME_TAG;
+import static com.example.captureapp.util.Constants.HEIGHT_FRAME_TAG;
+import static com.example.captureapp.util.Constants.HEIGHT_ORIGINAL_TAG;
+import static com.example.captureapp.util.Constants.LEFT_FRAME_TAG;
+import static com.example.captureapp.util.Constants.TOP_FRAME_TAG;
+import static com.example.captureapp.util.Constants.WIDTH_FRAME_TAG;
+import static com.example.captureapp.util.Constants.WIDTH_ORIGINAL_TAG;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -7,7 +15,6 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.provider.MediaStore;
-import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
@@ -26,6 +33,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.LifecycleOwner;
 
+import com.example.captureapp.R;
 import com.github.clans.fab.FloatingActionButton;
 import com.google.common.util.concurrent.ListenableFuture;
 
@@ -53,20 +61,12 @@ public class MainActivity extends AppCompatActivity implements ImageAnalysis.Ana
         super.onPostResume();
 
         //
-
         heightOriginal = previewView.getHeight();
         widthOriginal = previewView.getWidth();
         heightFrame = cameraOverlayView.getHeight();
         widthFrame = cameraOverlayView.getWidth();
         leftFrame = cameraOverlayView.getLeft();
         topFrame = cameraOverlayView.getTop();
-
-        Log.d("main", "widthOriginal: " + widthOriginal);
-        Log.d("main", "heightOriginal: " + heightOriginal);
-        Log.d("main", "heightFrame: " + heightFrame);
-        Log.d("main", "widthFrame: " + widthFrame);
-        Log.d("main", "leftFrame: " + leftFrame);
-        Log.d("main", "topFrame: " + topFrame);
 
     }
 
@@ -75,19 +75,19 @@ public class MainActivity extends AppCompatActivity implements ImageAnalysis.Ana
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        //
+        // check persmission
         ActivityCompat.requestPermissions(this,
                 new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,
                         Manifest.permission.READ_EXTERNAL_STORAGE},
                 PackageManager.PERMISSION_GRANTED);
 
-        //
+        // initialize view
         previewView = findViewById(R.id.previewView);
         bCapture = findViewById(R.id.bCapture);
         cameraOverlayView = findViewById(R.id.cameraOverlayView);
 
 
-        //
+        // add action on view
         bCapture.setOnClickListener(this);
         cameraProviderFuture = ProcessCameraProvider.getInstance(this);
         cameraProviderFuture.addListener(() -> {
@@ -107,6 +107,8 @@ public class MainActivity extends AppCompatActivity implements ImageAnalysis.Ana
 
     @SuppressLint("RestrictedApi")
     private void startCameraX(ProcessCameraProvider cameraProvider) {
+
+        // init camera
         cameraProvider.unbindAll();
         CameraSelector cameraSelector = new CameraSelector.Builder()
                 .requireLensFacing(CameraSelector.LENS_FACING_BACK)
@@ -151,9 +153,6 @@ public class MainActivity extends AppCompatActivity implements ImageAnalysis.Ana
     @Override
     public void analyze(@NonNull ImageProxy image) {
         // image processing here for the current frame
-
-        Log.d("analyse", "analyze: got the frame at: " +
-                image.getImageInfo().getTimestamp());
         image.close();
     }
 
@@ -197,14 +196,13 @@ public class MainActivity extends AppCompatActivity implements ImageAnalysis.Ana
 
                         Intent myIntent = new Intent(MainActivity.this,
                                 ImagePreviewActivity.class);
-                        myIntent.putExtra(ImagePreviewActivity.FILE_NAME_TAG,
-                                timestamp + ".jpg");
-                        myIntent.putExtra(ImagePreviewActivity.HEIGHT_ORIGINAL_TAG, heightOriginal);
-                        myIntent.putExtra(ImagePreviewActivity.WIDTH_ORIGINAL_TAG, widthOriginal);
-                        myIntent.putExtra(ImagePreviewActivity.HEIGHT_FRAME_TAG, heightFrame);
-                        myIntent.putExtra(ImagePreviewActivity.WIDTH_FRAME_TAG, widthFrame);
-                        myIntent.putExtra(ImagePreviewActivity.LEFT_FRAME_TAG, leftFrame);
-                        myIntent.putExtra(ImagePreviewActivity.TOP_FRAME_TAG, topFrame);
+                        myIntent.putExtra(FILE_NAME_TAG, timestamp + ".jpg");
+                        myIntent.putExtra(HEIGHT_ORIGINAL_TAG, heightOriginal);
+                        myIntent.putExtra(WIDTH_ORIGINAL_TAG, widthOriginal);
+                        myIntent.putExtra(HEIGHT_FRAME_TAG, heightFrame);
+                        myIntent.putExtra(WIDTH_FRAME_TAG, widthFrame);
+                        myIntent.putExtra(LEFT_FRAME_TAG, leftFrame);
+                        myIntent.putExtra(TOP_FRAME_TAG, topFrame);
 
                         startActivity(myIntent);
                     }

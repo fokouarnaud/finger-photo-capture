@@ -21,10 +21,10 @@
         android:networkSecurityConfig="@xml/network_security_config"
         >
         <activity
-            android:name=".ImagePreviewActivity"
+            android:name=".ui.ImagePreviewActivity"
             android:exported="false" />
         <activity
-            android:name=".MainActivity"
+            android:name=".ui.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
