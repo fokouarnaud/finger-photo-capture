@@ -1,5 +1,6 @@
 package com.example.captureapp.ui;
 
+import static com.example.captureapp.util.Constants.ACTION_PROCESSING;
 import static com.example.captureapp.util.Constants.HEIGHT_FRAME_TAG;
 import static com.example.captureapp.util.Constants.HEIGHT_ORIGINAL_TAG;
 import static com.example.captureapp.util.Constants.LEFT_FRAME_TAG;
@@ -23,6 +24,9 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.captureapp.R;
+import com.example.captureapp.data.network.APIService;
+import com.example.captureapp.data.network.ApiUtils;
+import com.example.captureapp.data.network.model.CandidatResult;
 import com.example.captureapp.util.Constants;
 import com.github.clans.fab.FloatingActionButton;
 
@@ -35,35 +39,27 @@ import java.text.SimpleDateFormat;
 import java.util.Locale;
 import java.util.UUID;
 
-import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.disposables.CompositeDisposable;
-import io.reactivex.disposables.Disposable;
-import io.reactivex.schedulers.Schedulers;
-import ua.naiksoftware.stomp.Stomp;
-import ua.naiksoftware.stomp.StompClient;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class ImagePreviewActivity extends AppCompatActivity {
 
     private FloatingActionButton sendCapture;
     private ImageView previewImageView;
+    private APIService mAPIService;
+    String currentSourceActivity;
+    public static final String TAG = "ImagePreviewActivity";
+    Integer current=0;
+    String tempTaskId="";
 
 
-    // connection can be slow with long runtime server processing
-    // so we have to negotiate the connection every time
-    // ( long polling: not long than 40 second [or any amount of time] to respond a request)
-    // because of that we constantly reestablishing a connection with the server (short polling)
-    // webSocket provide a full-duplex connection to avoid the behaviour
-    // of constantly reestablishing connection
 
-    // we can use STOMP protocol for effective client-server communication with webSocket.
-    // It defines a handful of frame types that are mapped onto WebSockets frames
-    // e.g., CONNECT, SUBSCRIBE, UNSUBSCRIBE, ACK, or SEND
 
-    private final String SERVER_PATH = "wss://javaweb-server.herokuapp.com/ws";
-    private StompClient mStompClient;
     private final String uniqueID = UUID.randomUUID().toString();
-    private final SimpleDateFormat mTimeFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
-    private CompositeDisposable compositeDisposable;
+    private final SimpleDateFormat mTimeFormat = new SimpleDateFormat(
+            "HH:mm:ss",
+            Locale.getDefault());
 
 
     int heightOriginal,
@@ -80,7 +76,6 @@ public class ImagePreviewActivity extends AppCompatActivity {
         initializeView();
 
     }
-
 
 
     private void initializeView() {
@@ -118,7 +113,7 @@ public class ImagePreviewActivity extends AppCompatActivity {
             cursor.moveToFirst();
 
             //
-            String filePath=  MediaStore.Images.Media.EXTERNAL_CONTENT_URI.toString() +
+            String filePath = MediaStore.Images.Media.EXTERNAL_CONTENT_URI.toString() +
                     "/" + cursor.getString(0);
             Uri uriPath = Uri.parse(filePath);
 
@@ -161,9 +156,15 @@ public class ImagePreviewActivity extends AppCompatActivity {
 
     //getting real path from uri
     private String getFilePath(Uri uri) {
+
         String[] projection = {MediaStore.Images.Media.DATA};
 
-        Cursor cursor = getContentResolver().query(uri, projection, null, null, null);
+        Cursor cursor = getContentResolver().query(uri,
+                projection,
+                null,
+                null,
+                null);
+
         if (cursor != null) {
             cursor.moveToFirst();
 
@@ -177,23 +178,52 @@ public class ImagePreviewActivity extends AppCompatActivity {
 
 
     private void sendMessage(String base64String) {
-        JSONObject jsonObject = new JSONObject();
-        try {
+        mAPIService = ApiUtils.getAPIService();
+        sendImageForProcessing(currentSourceActivity,ACTION_PROCESSING, base64String);
 
-            jsonObject.put("senderName", uniqueID);
-            jsonObject.put("receiverName", uniqueID);
-            jsonObject.put("status", "MESSAGE");
-            jsonObject.put("message", base64String);
-
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
     }
+
+    public void sendImageForProcessing(String currentSourceActivity, String action, String img) {
+        toast("send: "+action);
+        mAPIService.processingFingerphoto(action,img)
+                .enqueue(new Callback<CandidatResult>() {
+                    @Override
+                    public void onResponse(Call<CandidatResult> call,
+                                           Response<CandidatResult> response) {
+
+                        if (response.isSuccessful()) {
+                            assert response.body() != null;
+                            //toast(response.body().toString());
+                            Log.d(TAG, "post submitted to API." + response.body().toString());
+                            // ImageSingleton.byteArrayImage= Base64.decode(response.body().getImg(),
+                            //         Base64.DEFAULT);
+                            // ImageSingleton.descriptors =response.body().getDescriptors();
+                            //ImageSingleton.keypoints="";
+
+                            // loop stops
+                            //sendBackResult();
+
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<CandidatResult> call, Throwable t) {
+                        Log.e(TAG, "Unable to submit post to API.");
+                      //Intent intent = new Intent();
+                       // setResult(RESULT_CANCELED, intent);
+                      //  finish();
+                    }
+                });
+    }
+
+
+
 
     private void sendImage(Bitmap image) {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         image.compress(Bitmap.CompressFormat.JPEG, 50, outputStream);
         String base64String = Base64.encodeToString(outputStream.toByteArray(), Base64.DEFAULT);
+        toast("call send message");
         sendMessage(base64String);
     }
 

@@ -4,7 +4,7 @@ package com.example.captureapp.data.network;
 public class ApiUtils {
     private ApiUtils() {}
 
-    public static final String BASE_URL = "https://finger-photo-pad-api.herokuapp.com/";
+    public static final String BASE_URL = "https://javaweb-server.herokuapp.com/";
 
     public static APIService getAPIService() {
 
